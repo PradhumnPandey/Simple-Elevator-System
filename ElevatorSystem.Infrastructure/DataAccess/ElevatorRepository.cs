@@ -1,22 +1,35 @@
 ﻿using ElevatorSystem.Domain.Enums;
 using ElevatorSystem.Infrastructure.Interfaces;
+using System.Collections.Generic;
 
 namespace ElevatorSystem.Infrastructure.DataAccess
 {
-    public class ElevatorRepository:IElevatorRepository
+    /// <summary>
+    /// Provides data access and query operations for elevators.
+    /// </summary>
+    public class ElevatorRepository : IElevatorRepository
     {
         private readonly List<Elevator> _elevators;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ElevatorRepository"/> class.
+        /// </summary>
+        /// <param name="elevators">The list of elevators to manage.</param>
         public ElevatorRepository(List<Elevator> elevators)
         {
-            _elevators = this._elevators = elevators ?? new List<Elevator>();
+            _elevators = elevators ?? new List<Elevator>();
         }
 
-        public bool AreElevatorsAvailable()
+        /// <summary>
+        /// Determines whether any elevator is available (stopped or ready for next floor).
+        /// </summary>
+        /// <returns>True if at least one elevator is available; otherwise, false.</returns>
+        public bool IsAnyElevatorAvailable()
         {
-            foreach (var elevator in _elevators)
+            for (int i = 0; i < _elevators.Count; i++)
             {
-                if (elevator.Status == ElevatorStatus.Stopped)
+                var status = _elevators[i].Status;
+                if (status == ElevatorStatus.Stopped)
                 {
                     return true;
                 }
@@ -24,14 +37,28 @@ namespace ElevatorSystem.Infrastructure.DataAccess
             return false;
         }
 
+        /// <summary>
+        /// Gets all elevators managed by the repository.
+        /// </summary>
+        /// <returns>The list of elevators.</returns>
         public List<Elevator> GetAllElevators()
         {
             return _elevators;
         }
 
+        /// <summary>
+        /// Gets an elevator by its unique identifier.
+        /// </summary>
+        /// <param name="id">The elevator's unique identifier.</param>
+        /// <returns>The elevator if found; otherwise, null.</returns>
         public Elevator? GetElevatorById(int id)
         {
-            return _elevators.Find(e => e.Id == id);
+            for (int i = 0; i < _elevators.Count; i++)
+            {
+                if (_elevators[i].Id == id)
+                    return _elevators[i];
+            }
+            return null;
         }
     }
 }
