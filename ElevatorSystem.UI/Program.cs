@@ -3,6 +3,7 @@ using ElevatorSystem.Domain.Configuration;
 using ElevatorSystem.Infrastructure.Interfaces;
 using ElevatorSystem.Infrastructure.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ElevatorSystem.UI
 {
@@ -17,21 +18,32 @@ namespace ElevatorSystem.UI
 
             // Bind to strongly-typed config
             var elevatorConfig = new ElevatorSystemConfig();
+            var elevatorSettings = new ElevatorSettings();
             configuration.GetSection("ElevatorSystem").Bind(elevatorConfig);
+            configuration.GetSection("ElevatorSettings").Bind(elevatorSettings);
 
-            var serviceProvider = Startup.ConfigureServices(elevatorConfig);
-            var elevatorService = serviceProvider.GetService(typeof(IElevatorService)) as IElevatorService ?? default!;
-            var elevatorRepository = serviceProvider.GetService(typeof(IElevatorRepository)) as IElevatorRepository ?? default!;
-            var logger = serviceProvider.GetService(typeof(LoggingService)) as LoggingService ?? default!;
-            var config = serviceProvider.GetService(typeof(ElevatorSystemConfig)) as ElevatorSystemConfig ?? default!;
+            // Read GridDisplayEnabled from appsettings.json
+            bool displayGrid = configuration.GetValue<bool>("GridDisplayEnabled");
 
-            // Use the new ConsoleUI for SRP
-            var ui = new ConsoleUI(elevatorRepository, elevatorService, logger, config);
-            ui.ShowMenu();
+            // Pass !displayGrid to control console logging: only log to console when not simulating
+            var serviceProvider = Startup.ConfigureServices(elevatorConfig, elevatorSettings, !displayGrid);
+            var elevatorService = serviceProvider.GetRequiredService<IElevatorService>();
+            var elevatorRepository = serviceProvider.GetRequiredService<IElevatorRepository>();
+            var logger = serviceProvider.GetRequiredService<ILoggingService>();
+            var config = serviceProvider.GetRequiredService<ElevatorSystemConfig>();
 
-            // Start the in-place updating grid display
-            var display = new ElevatorGridDisplay(() => elevatorRepository.GetAllElevators());
-            display.Start();
+            if (displayGrid)
+            {
+                var display = new ElevatorGridDisplay(() => elevatorRepository.GetAllElevators(), topRow: 0);
+                var sim = new Simulation(elevatorService, display);
+                sim.SimulateMultipleRequestsAsync(config.NumberOfFloors, 50).GetAwaiter().GetResult();
+            }
+            else
+            {
+                // Load simple console UI
+                var ui = new ConsoleUI(elevatorService, logger, config);
+                ui.RunSimulationAsync().GetAwaiter().GetResult();
+            }
         }
     }
 }

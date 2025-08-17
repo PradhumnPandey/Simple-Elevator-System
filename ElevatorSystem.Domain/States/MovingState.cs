@@ -1,12 +1,25 @@
 namespace ElevatorSystem.Domain.States
 {
+    /// <summary>
+    /// Represents the moving state of the elevator.
+    /// </summary>
     public class MovingState : IElevatorState
     {
-        public async void Handle(Elevator elevator)
+        /// <summary>
+        /// Handles the elevator logic when in the moving state.
+        /// Moves the elevator to the target floor asynchronously, then transitions to idle.
+        /// </summary>
+        /// <param name="elevator">The elevator instance.</param>
+        public void Handle(Elevator elevator)
         {
-            if (elevator.TargetFloor.HasValue && elevator.CurrentFloor != elevator.TargetFloor.Value)
+            _ = MoveAndTransitionAsync(elevator);
+        }
+
+        private async Task MoveAndTransitionAsync(Elevator elevator)
+        {
+            if (elevator.TargetFloor is int targetFloor && elevator.CurrentFloor != targetFloor)
             {
-                await elevator.MoveToFloor(elevator.TargetFloor.Value);
+                await elevator.MoveToFloor(targetFloor).ConfigureAwait(false);
             }
 
             // After moving, clear the target and transition to Idle
@@ -14,6 +27,9 @@ namespace ElevatorSystem.Domain.States
             elevator.SetState(new IdleState());
         }
 
+        /// <summary>
+        /// Gets the status string representing the moving state.
+        /// </summary>
         public string Status => "Moving";
     }
 }
