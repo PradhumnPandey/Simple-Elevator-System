@@ -1,7 +1,9 @@
 ﻿using ElevatorSystem.Application.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace ElevatorSystem.UI
 {
@@ -27,9 +29,32 @@ namespace ElevatorSystem.UI
         /// <param name="totalRequests">The total number of requests to simulate.</param>
         public async Task SimulateMultipleRequestsAsync(int numberOfFloors, int totalRequests = 50)
         {
-            int requestsSent = 0;
-            using var cts = new CancellationTokenSource();
+            var requests = new List<int>();
+            // 1. Collect all requests first
+            for (int i = 0; i < totalRequests; i++)
+            {
+                int floor = _random.Next(1, numberOfFloors + 1);
+                requests.Add(floor);
+            }
 
+            // Log all requests in one line with proper grammar
+            if (requests.Count == 1)
+            {
+                Console.WriteLine($"Request for floor {requests[0]} has been received.");
+            }
+            else if (requests.Count == 2)
+            {
+                Console.WriteLine($"Requests for floors {requests[0]} and {requests[1]} have been received.");
+            }
+            else if (requests.Count > 2)
+            {
+                var allButLast = requests.Take(requests.Count - 1).Select(f => f.ToString());
+                var last = requests.Last();
+                Console.WriteLine($"Requests for floors {string.Join(", ", allButLast)}, and {last} have been received.");
+            }
+
+            // 2. Optionally show UI while waiting (if needed)
+            using var cts = new CancellationTokenSource();
             Task? uiTask = null;
             if (_display != null)
             {
@@ -44,15 +69,10 @@ namespace ElevatorSystem.UI
                 }, cts.Token);
             }
 
-            // Request generation loop
-            while (requestsSent < totalRequests)
+            // 3. Now process all requests at once
+            foreach (var floor in requests)
             {
-                for (int i = 0; i < 5 && requestsSent < totalRequests; i++, requestsSent++)
-                {
-                    int floor = _random.Next(1, numberOfFloors + 1);
-                    _elevatorService.RequestElevator(floor);
-                }
-                await Task.Delay(1000).ConfigureAwait(false);
+                _elevatorService.RequestElevator(floor);
             }
 
             // Allow UI to update one last time and then stop
@@ -64,8 +84,6 @@ namespace ElevatorSystem.UI
             }
 
             cts.Cancel();
-
-            Console.WriteLine("Simulation complete. Press Enter to exit.");
             Console.ReadLine();
         }
     }
