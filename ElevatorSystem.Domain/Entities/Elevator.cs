@@ -119,12 +119,12 @@ public class Elevator
         while (CurrentFloor != floor)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
             CurrentFloor += (CurrentFloor < floor) ? 1 : -1;
-
+            Console.WriteLine($"[STATUS] Elevator {Id}: Floor {CurrentFloor}"); // Log only on movement
             await Task.Delay(TimeSpan.FromSeconds(_settings.MoveDelaySeconds), cancellationToken).ConfigureAwait(false);
         }
         Status = ElevatorStatus.Dropping_Picking;
+        Console.WriteLine($"[INFO] Elevator {Id} arrived at floor {floor}. Passengers entering/leaving...");
         await Task.Delay(TimeSpan.FromSeconds(_settings.PickupDropoffDelaySeconds), cancellationToken).ConfigureAwait(false);
         Status = ElevatorStatus.Stopped;
         CurrentDirection = Direction.Idle;

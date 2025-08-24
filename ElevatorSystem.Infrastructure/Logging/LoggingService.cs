@@ -1,4 +1,6 @@
-﻿namespace ElevatorSystem.Infrastructure.Logging
+﻿using System;
+
+namespace ElevatorSystem.Infrastructure.Logging
 {
     /// <summary>
     /// Provides thread-safe logging functionality for the elevator system.
@@ -26,11 +28,10 @@
         /// <param name="message">The message to log.</param>
         public void LogInfo(string message)
         {
-            string logEntry = $"INFO: {DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}";
+            string logEntry = $"INFO: {message}";
             if (_logToConsole)
             {
                 WriteColoredLine($"[INFO] {message}", ConsoleColor.Gray);
-                WriteToConsole(logEntry);
             }
             WriteToFile(logEntry);
         }
@@ -40,7 +41,7 @@
         /// </summary>
         /// <param name="message">The error message.</param>
         /// <param name="ex">The exception to log.</param>
-        public void LogError(string message, Exception? ex = null)
+        public void LogError(string message, Exception ex)
         {
             string logEntry = $"ERROR: {DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}" + (ex != null ? $" - Exception: {ex}" : "");
             if (_logToConsole)
@@ -48,7 +49,6 @@
                 WriteColoredLine($"[ERROR] {message}", ConsoleColor.Red);
                 if (ex != null)
                     Console.WriteLine(ex);
-                WriteToConsole(logEntry);
             }
             WriteToFile(logEntry);
         }

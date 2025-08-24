@@ -4,6 +4,7 @@ using ElevatorSystem.Domain.Services;
 using ElevatorSystem.Infrastructure.Interfaces;
 using ElevatorSystem.Infrastructure.Logging;
 using System.Collections.Concurrent;
+using ElevatorSystem.Domain.Enums;
 
 namespace ElevatorSystem.Application.Services
 {
@@ -47,23 +48,46 @@ namespace ElevatorSystem.Application.Services
         /// <param name="requestedFloor">The floor number where the elevator is requested.</param>
         public void RequestElevator(int requestedFloor)
         {
-            _logger.LogInfo($"Request received for floor {requestedFloor}.");
+            RequestElevator(requestedFloor, "Up");
+        }
+
+        /// <summary>
+        /// Requests an elevator to the specified floor with direction.
+        /// </summary>
+        /// <param name="requestedFloor">The floor number where the elevator is requested.</param>
+        /// <param name="direction">The direction of the request ("Up" or "Down").</param>
+        public void RequestElevator(int requestedFloor, string direction)
+        {
             try
             {
                 var request = new ElevatorRequest(requestedFloor);
                 if (_repository.IsAnyElevatorAvailable())
                 {
+                    // Find the elevator that will be assigned
+                    var elevators = _repository.GetAllElevators();
+                    var availableElevators = elevators.Where(e => e.Status == ElevatorStatus.Stopped).ToList();
+                    Elevator? assignedElevator = null;
+                    if (availableElevators.Any())
+                    {
+                        assignedElevator = availableElevators.OrderBy(e => Math.Abs(e.CurrentFloor - requestedFloor)).First();
+                    }
+                    else
+                    {
+                        assignedElevator = elevators.OrderBy(e => Math.Abs(e.CurrentFloor - requestedFloor)).First();
+                    }
+
+                    _logger.LogInfo($"Elevator {assignedElevator?.Id} assigned to floor {requestedFloor}.");
+
                     _coordinatorService.ProcessRequest(request);
 
-                    LogRequestProcessing(requestedFloor, -1);
+                    LogRequestProcessing(requestedFloor, assignedElevator?.Id ?? -1);
 
-                    LogRequestCompleted(requestedFloor, -1);
-                    _logger.LogInfo($"Request processed for floor {requestedFloor}.");
+                    LogRequestCompleted(requestedFloor, assignedElevator?.Id ?? -1);
+                    _logger.LogInfo($"Request processed for floor {requestedFloor} by elevator {assignedElevator?.Id}.");
                 }
                 else
                 {
                     _requestQueue.Enqueue(request);
-                    _logger.LogInfo($"All elevators are occupied. Request for floor {requestedFloor} added to the queue.");
                 }
             }
             catch (Exception ex)
